@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>BaZi</title>
+    <meta content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" name="viewport">
+    <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/datedropper/2.0/datedropper.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/timedropper/1.0/timedropper.min.css">
+    <style type="text/css">
+        .demo{margin:80px auto 40px auto;width:400px}
+        .input{padding:6px;border:1px solid #d3d3d3}
+    </style>
+</head>
+<body>
+    <iframe id="geoPage" width=0 height=0 frameborder=0  style="display:none;" scrolling="no"
+        src="https://apis.map.qq.com/tools/geolocation?key=V5ZBZ-IKQ3X-ZO54X-ZOG65-C5W4V-56FDQ&referer=myapp">
+    </iframe>
+
+    <div id="main">
+        <div class="demo">
+            <p>当前的位置信息</p>
+            <p><input type="text" class="input" id="LocaltionInfo" readonly="readonly"/></p>
+            <p><input type="text" class="input" id="TimeZoneInfo" readonly="readonly"/></p>
+            <p>输入新历</p>
+            <p>请选择日期：<input type="text" class="input" id="pickdate" readonly="readonly"/></p>
+            <p>请选择时间：<input type="text" class="input" id="picktime" readonly="readonly"/></p>
+            <button class="btnGetInfo">Get</button>
+            <p>太阳时</p>
+            <p><input type="text" class="input" id="solarTime" readonly="readonly"/></p>
+            <p>生辰八字</p>
+            <!-- <p><input type="text" class="input" id="strBaZi" readonly="readonly"/></p> -->
+            <textarea id="shuxing" rows="18" cols="40" readonly="readonly">
+            </textarea>
+        </div>           
+    </div>
+</body>
+<script type="text/javascript" src="https://cdn.staticfile.org/jquery/1.12.3/jquery.min.js"></script>
+<script src="https://cdn.staticfile.org/datedropper/2.0/datedropper.min.js"></script>
+<script src="https://cdn.staticfile.org/timedropper/1.0/timedropper.min.js"></script>
+<script>
+$("#pickdate").dateDropper({
+	animate: true,
+	format: 'Y-m-d',
+	maxYear: '2096'
+});
+$("#picktime").timeDropper({
+	meridians: false,
+	format: 'HH:mm',
+});
+</script>
+<script type="text/javascript">
+    var latit = 0.00;
+    var longit = 0.00;
+    var ipadd = "";
+    var countryCode = "";
+    var timezone = "";
+    var loc = null;
+
+    var date = new Date();
+    var year = date.getFullYear();
+    var month = date.getMonth() + 1;
+    var day = date.getDate();
+    $("#pickdate").val(year+"-"+month+"-"+day)
+
+    window.addEventListener('message', function(event) {
+        // 接收位置信息
+        this.loc = event.data;
+        console.log('location', loc);
+        latit = loc.lat;
+        longit = loc.lng;
+        console.log('location', latit, longit);
+        $("#LocaltionInfo").val(loc.nation + "," + loc.province + "," + loc.city)
+    }, false);
+
+    // 6s为推荐值，业务调用方可根据自己的需求设置改时间，不建议太短
+    setTimeout(function() {
+        if (!this.loc) {
+            console.log('定位超时')
+        }
+    }, 6000) 
+
+    let url = 'http://ip-api.com/json';
+    fetch(url)
+        .then(res => res.json())
+        .then((out) => {
+            console.log('Checkout this JSON! ', out);
+            ipadd = out.query;
+            timezone = out.timezone;
+            countryCode = out.countryCode;
+            $("#TimeZoneInfo").val(countryCode + "," + timezone);
+        })
+        .catch(err => { throw err });
+
+    $(document).ready(function(){
+        $(".btnGetInfo").click(function(){
+            var pickdate = $("#pickdate").val();
+            var picktime = $("#picktime").val();
+
+            $.post("/calcBaZi", {"pickdate": pickdate, 'picktime': picktime, 
+                                    'latit': latit, 'longit': longit,
+                                    'ipadd': ipadd, 'timezone': timezone,
+                                    'countryCode': countryCode, 
+                                }, 
+                function(data, status){
+                    $("#strBaZi").val(data.strBaZi);
+                    $("#solarTime").val(data.solarTime);
+                    $("#shuxing").val(data.shuxing);
+                });
+            });
+    });
+</script>
+
+
+</html>
