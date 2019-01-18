@@ -86,12 +86,19 @@ def Calc(pickdate, picktime, latit, longit, ipadd, timezone, countryCode):
     tt = pytz.country_timezones(countryCode)
     tz = pytz.timezone(tt[0])
     # 从本地时间转换为 UTC 时间
-    dtstr = pickdate + " " + picktime + ":01"
+    # 这里得到的时间可能是 08:59 这样的小时：分钟，但是在下面的
+    # %H:%M 无法处理这种情况，只能处理 8:59 的情况···
+    # 所以就先进行分割，然后转 int ，再转回来 str
+    timeList = picktime.split(":")
+    dtstr = pickdate + " " + str(int(timeList[0])) + ":" + str(int(timeList[1])) + ":01"
     dt = datetime.strptime(dtstr, '%Y-%m-%d %H:%M:%S')
     dt = tz.localize(dt)
     dt = datetime.utcfromtimestamp( dt.timestamp() )
     # 输入 UTC，计算太阳时，默认的海拔输入0
     solarTime = CalcSolarTime(dt, float(longit), float(latit), float(0))
+    inputHours = int(timeList[0])
+    if inputHours <= 12 and inputHours > 0:
+        solarTime = solarTime + timedelta(hours=12)
 
     strBaZi = Calc_BaZi(solarTime.year, solarTime.month, solarTime.day, solarTime.hour)
 
